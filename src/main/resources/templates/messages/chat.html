@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SmartHire - Chat</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+    <style>
+
+        /* Full screen chat layout */
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .chat-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 16px 20px;
+            height: calc(100vh - 55px);
+            overflow: hidden;
+        }
+
+        /* Chat Header */
+        .chat-header {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+        }
+
+        .chat-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #2c3e50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* Chat Messages Box */
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            background: #f4f6f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Scrollbar styling */
+        .chat-box::-webkit-scrollbar { width: 5px; }
+        .chat-box::-webkit-scrollbar-track { background: #f1f1f1; }
+        .chat-box::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+        /* Empty state */
+        .chat-empty {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            font-size: 14px;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Message bubbles */
+        .msg-row {
+            display: flex;
+            margin-bottom: 4px;
+        }
+
+        .msg-row.sent { justify-content: flex-end; }
+        .msg-row.received { justify-content: flex-start; }
+
+        .msg-bubble {
+            max-width: 60%;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .msg-bubble.sent {
+            background: #2c3e50;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-bubble.received {
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #e8e8e8;
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-sender {
+            font-size: 11px;
+            font-weight: bold;
+            color: #888;
+            margin-bottom: 3px;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            margin-top: 4px;
+            opacity: 0.7;
+            text-align: right;
+        }
+
+        .msg-bubble.received .msg-time {
+            text-align: left;
+            color: #999;
+        }
+
+        /* Meet link */
+        .meet-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #1a73e8;
+            color: white;
+            padding: 7px 14px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        .meet-link:hover { background: #1558c0; }
+
+        /* Input Area */
+        .chat-input-area {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 14px 16px;
+            flex-shrink: 0;
+        }
+
+        .meet-input-section {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .meet-input-section label {
+            font-size: 12px;
+            color: #777;
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .meet-input-section input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .meet-input-section input:focus {
+            border-color: #2c3e50;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-row textarea {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 22px;
+            font-size: 14px;
+            font-family: Arial, sans-serif;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+            max-height: 100px;
+        }
+
+        .input-row textarea:focus {
+            border-color: #2c3e50;
+        }
+
+        .send-btn {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .send-btn:hover { background: #1a252f; }
+
+    </style>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav>
+    <a href="/" class="nav-brand">SmartHire</a>
+    <div class="nav-links">
+
+        <span th:if="${currentUser.role == 'HR'}">
+            <a th:href="@{/hr/dashboard}">Dashboard</a>
+            <a th:href="@{/hr/post-job}">Post Job</a>
+            <a th:href="@{/hr/view-jobs}">View Jobs</a>
+            <a th:href="@{/messages/inbox}"> Inbox</a>
+            <a th:href="@{/}" class="logout">Logout</a>
+        </span>
+
+        <span th:if="${currentUser.role == 'STUDENT'}">
+            <a th:href="@{/student/dashboard}">Dashboard</a>
+            <a th:href="@{/student/jobs}">Browse Jobs</a>
+            <a th:href="@{/student/applied-jobs}">My Applications</a>
+            <a th:href="@{/messages/inbox}"> Inbox</a>
+            <a th:href="@{/}" class="logout">Logout</a>
+        </span>
+
+        
+        
+    </div>
+</nav>
+
+<div class="chat-wrapper">
+
+    <!-- Chat Header -->
+    <div class="chat-header">
+        <div style="display:flex; align-items:center; gap:12px;">
+
+            <a th:href="@{/messages/inbox}"
+               class="btn btn-primary btn-sm">← Back</a>
+
+            <div class="chat-avatar"
+                 th:text="${#strings.substring(otherUser.name,0,1)}">
+            </div>
+
+            <div>
+                <p style="font-weight:bold; color:#2c3e50; font-size:15px;"
+                   th:text="${otherUser.name}">
+                </p>
+                <p style="font-size:12px; color:#777;">
+                    <span th:if="${otherUser.role == 'HR'}"
+                          th:text="${otherUser.company}"></span>
+                    <span th:if="${otherUser.role == 'STUDENT'}"
+                          th:text="${otherUser.college}"></span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Job Tag -->
+        <div th:if="${job != null}"
+             style="background:#f4f6f8; padding:6px 14px;
+                    border-radius:20px; font-size:12px; color:#555;">
+            💼 <span th:text="${job.title}"></span>
+        </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-box" id="chatBox">
+
+        <!-- Empty state -->
+        <div th:if="${#lists.isEmpty(messages)}" class="chat-empty">
+            <span style="font-size:36px;">💬</span>
+            <p>No messages yet. Send the first message!</p>
+        </div>
+
+        <!-- Messages loop -->
+        <div th:each="msg : ${messages}">
+
+            <!-- Sent -->
+            <div th:if="${msg.sender.id == currentUser.id}"
+                 class="msg-row sent">
+                <div class="msg-bubble sent">
+                    <p th:text="${msg.content}"></p>
+                    <div th:if="${msg.meetLink != null and msg.meetLink != ''}">
+                        <a th:href="${msg.meetLink}"
+                           class="meet-link" target="_blank">
+                            📹 Join Google Meet
+                        </a>
+                    </div>
+                    <p class="msg-time"
+                       th:text="${#temporals.format(msg.sentAt,
+                                 'dd MMM, hh:mm a')}">
+                    </p>
+                </div>
+            </div>
+
+            <!-- Received -->
+            <div th:if="${msg.sender.id != currentUser.id}"
+                 class="msg-row received">
+                <div class="msg-bubble received">
+                    <p class="msg-sender" th:text="${msg.sender.name}"></p>
+                    <p th:text="${msg.content}"></p>
+                    <div th:if="${msg.meetLink != null and msg.meetLink != ''}">
+                        <a th:href="${msg.meetLink}"
+                           class="meet-link" target="_blank">
+                            📹 Join Google Meet
+                        </a>
+                    </div>
+                    <p class="msg-time"
+                       th:text="${#temporals.format(msg.sentAt,
+                                 'dd MMM, hh:mm a')}">
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+        <form th:action="@{/messages/send}" method="post">
+
+            <input type="hidden" name="receiverId"
+                   th:value="${otherUser.id}"/>
+            <input type="hidden" name="jobId"
+                   th:value="${jobId}"/>
+
+            <!-- Meet Link - HR only -->
+            <div class="meet-input-section"
+                 th:if="${currentUser.role == 'HR'}">
+                <label>📹 Google Meet Link (optional)</label>
+                <input type="text" name="meetLink"
+                       placeholder="https://meet.google.com/xxx-xxxx-xxx"/>
+            </div>
+
+            <!-- Message + Send -->
+            <div class="input-row">
+                <textarea name="content" rows="1"
+                          placeholder="Type a message..."
+                          required
+                          oninput="this.style.height='auto';
+                                   this.style.height=this.scrollHeight+'px'">
+                </textarea>
+                <button type="submit" class="send-btn">➤</button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<!-- Auto scroll to bottom -->
+<script>
+    var chatBox = document.getElementById('chatBox');
+    chatBox.scrollTop = chatBox.scrollHeight;
+</script>
+
+</body>
+</html>

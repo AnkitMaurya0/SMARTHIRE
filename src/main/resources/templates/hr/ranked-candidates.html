@@ -15,13 +15,26 @@
         <a th:href="@{/hr/dashboard}">Dashboard</a>
         <a th:href="@{/hr/post-job}">Post Job</a>
         <a th:href="@{/hr/view-jobs}">View Jobs</a>
-        <a th:href="@{/logout}" class="logout">Logout</a>
+        <a th:href="@{/messages/inbox}">Inbox
+            <span th:if="${unreadMessages > 0}"
+                  style="background:#e74c3c; color:white;
+                         border-radius:50%; padding:2px 7px;
+                         font-size:11px; font-weight:bold;"
+                  th:text="${unreadMessages}">
+            </span>
+        </a>
+        <a th:href="@{/}" class="logout">Logout</a>
     </div>
 </nav>
 
 <div class="container">
 
     <div class="page-title">Ranked Candidates</div>
+
+    <!-- Success message -->
+    <div th:if="${success}" class="alert alert-success"
+         th:text="${success}">
+    </div>
 
     <!-- Job Details Card -->
     <div class="card" style="margin-bottom: 24px;">
@@ -84,14 +97,15 @@
                     <th>Missing Skills</th>
                     <th>Applied Date</th>
                     <th>Status</th>
+                    <th>Update Status</th>
+                    <th>Message</th>
                 </tr>
             </thead>
             <tbody>
                 <tr th:each="app, stat : ${applications}">
 
-                    <!-- Rank number -->
+                    <!-- Rank -->
                     <td>
-                        <!-- Show medal for top 3 -->
                         <span th:if="${stat.index == 0}">🥇</span>
                         <span th:if="${stat.index == 1}">🥈</span>
                         <span th:if="${stat.index == 2}">🥉</span>
@@ -107,7 +121,7 @@
                     <td th:text="${app.student.college}"></td>
                     <td th:text="${app.student.degree}"></td>
 
-                    <!-- ATS Score with color -->
+                    <!-- ATS Score -->
                     <td>
                         <strong
                             th:classappend="${app.atsScore >= 75} ? 'score-excellent' :
@@ -118,7 +132,7 @@
                         </strong>
                     </td>
 
-                    <!-- Matched skills - green tags -->
+                    <!-- Matched skills -->
                     <td>
                         <div class="skill-tags">
                             <span th:each="skill :
@@ -129,7 +143,7 @@
                         </div>
                     </td>
 
-                    <!-- Missing skills - red tags -->
+                    <!-- Missing skills -->
                     <td>
                         <div class="skill-tags">
                             <span th:each="skill :
@@ -142,15 +156,70 @@
 
                     <td th:text="${app.appliedDate}"></td>
 
-                    <!-- Status Badge -->
+                    <!-- Current Status Badge -->
                     <td>
                         <span class="badge"
-                              th:classappend="${app.status == 'APPLIED'}     ? 'badge-applied' :
-                                             (${app.status == 'SHORTLISTED'} ? 'badge-shortlisted' :
-                                             (${app.status == 'SELECTED'}    ? 'badge-selected' :
-                                             'badge-rejected'))"
+                              th:classappend="${app.status == 'APPLIED'}      ? 'badge-applied' :
+                                             (${app.status == 'ASSESSMENT'}   ? 'badge-applied' :
+                                             (${app.status == 'INTERVIEW'}    ? 'badge-shortlisted' :
+                                             (${app.status == 'NEXT_ROUND'}   ? 'badge-shortlisted' :
+                                             (${app.status == 'SELECTED'}     ? 'badge-selected' :
+                                             'badge-rejected'))))"
                               th:text="${app.status}">
                         </span>
+                    </td>
+
+                    <!-- Status Change Dropdown -->
+                    <td>
+                        <form th:action="@{/hr/update-status}" method="post">
+                            <input type="hidden" name="appId"
+                                   th:value="${app.id}"/>
+                            <input type="hidden" name="jobId"
+                                   th:value="${job.id}"/>
+                            <select name="status"
+                                    style="padding:5px 8px; border-radius:5px;
+                                           border:1px solid #ccc; font-size:13px;
+                                           margin-bottom:6px; width:100%;">
+                                <option value="APPLIED"
+                                        th:selected="${app.status == 'APPLIED'}">
+                                    Applied
+                                </option>
+                                <option value="ASSESSMENT"
+                                        th:selected="${app.status == 'ASSESSMENT'}">
+                                    Selected for Assessment
+                                </option>
+                                <option value="INTERVIEW"
+                                        th:selected="${app.status == 'INTERVIEW'}">
+                                    Selected for Interview
+                                </option>
+                                <option value="NEXT_ROUND"
+                                        th:selected="${app.status == 'NEXT_ROUND'}">
+                                    Selected for Next Round
+                                </option>
+                                <option value="SELECTED"
+                                        th:selected="${app.status == 'SELECTED'}">
+                                    Selected
+                                </option>
+                                <option value="REJECTED"
+                                        th:selected="${app.status == 'REJECTED'}">
+                                    Rejected
+                                </option>
+                            </select>
+                            <button type="submit"
+                                    class="btn btn-success btn-sm"
+                                    style="width:100%;">
+                                Update
+                            </button>
+                        </form>
+                    </td>
+
+                    <!-- Message Button -->
+                    <td>
+                        <a th:href="@{/messages/chat/{id}(id=${app.student.id},
+                                     jobId=${job.id})}"
+                           class="btn btn-primary btn-sm">
+                            💬 Message
+                        </a>
                     </td>
 
                 </tr>

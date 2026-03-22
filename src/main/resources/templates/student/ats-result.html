@@ -16,7 +16,8 @@
         <a th:href="@{/student/jobs}">Browse Jobs</a>
         <a th:href="@{/student/applied-jobs}">My Applications</a>
         <a th:href="@{/student/ats-check}">ATS Check</a>
-        <a th:href="@{/logout}" class="logout">Logout</a>
+        <a th:href="@{/messages/inbox}">Inbox</a>
+        <a th:href="@{/}" class="logout">Logout</a>
     </div>
 </nav>
 
@@ -24,30 +25,40 @@
 
     <div class="page-title">ATS Resume Checker</div>
 
-    <!-- Two column layout -->
-    <!-- Left side = Upload Form, Right side = Result -->
     <div style="display: grid;
                 grid-template-columns: 1fr 1fr;
-                gap: 24px;
-                align-items: start;">
+                gap: 24px; align-items: start;">
 
-        <!-- ========================
-             LEFT - Upload Form
-             ======================== -->
+        <!-- LEFT - Upload Form -->
         <div class="card">
-
             <h3 style="color:#2c3e50; margin-bottom:8px;">
                 Check Your Resume Score
             </h3>
             <p style="color:#777; font-size:14px; margin-bottom:20px;">
-                Upload your resume and enter the required skills
-                to check how well your resume matches the job.
+                Select a job and upload your resume to see
+                how well it matches the job requirements.
             </p>
 
-            <!-- ATS Check Form -->
             <form th:action="@{/student/ats-check}"
                   method="post"
-                  enctype="multipart/form-data">
+                  enctype="multipart/form-data"
+                  id="checkForm">
+
+                <!-- Job Selection Dropdown -->
+                <div class="form-group">
+                    <label>Select Job to Check Against</label>
+                    <select name="jobId" id="jobSelect" required>
+                        <option value="">-- Select a Job --</option>
+                        <option th:each="job : ${jobs}"
+                                th:value="${job.id}"
+                                th:selected="${selectedJobId != null
+                                              and job.id == selectedJobId}"
+                                th:text="${job.title} + ' | ' +
+                                        ${job.location} + ' | ' +
+                                        ${job.postedDate}">
+                        </option>
+                    </select>
+                </div>
 
                 <!-- Resume Upload -->
                 <div class="form-group">
@@ -57,8 +68,7 @@
                         <p>📄 Click to select your resume</p>
                         <p>Supported: PDF, DOC, DOCX</p>
                         <p id="fileName"
-                           style="color:#2c3e50;
-                                  font-weight:bold;
+                           style="color:#2c3e50; font-weight:bold;
                                   margin-top:8px;">
                         </p>
                     </div>
@@ -71,98 +81,85 @@
                            required/>
                 </div>
 
-                <!-- Skills Input -->
-                <div class="form-group">
-                    <label>Enter Required Skills</label>
-                    <input type="text"
-                           name="skills"
-                           placeholder="e.g. java, python, mysql, html, css"
-                           required/>
-                    <small style="color:#777; font-size:12px;">
-                        Enter skills separated by comma
-                    </small>
-                </div>
-
                 <button type="submit" class="btn btn-primary btn-full">
                     Check ATS Score
                 </button>
 
             </form>
-
         </div>
 
-        <!-- ========================
-             RIGHT - Result Section
-             ======================== -->
+        <!-- RIGHT - Result -->
         <div>
 
-            <!-- Error message -->
-            <div th:if="${error}" class="alert alert-error"
+            <!-- Error -->
+            <div th:if="${error}"
+                 class="alert alert-error"
                  th:text="${error}">
             </div>
 
-            <!-- Show result only when score is available -->
+            <!-- Result -->
             <div th:if="${score != null}">
 
+                <!-- Job Info -->
+                <div class="card" th:if="${job != null}"
+                     style="margin-bottom:16px; background:#f8f9fa;">
+                    <p style="font-size:13px; color:#777;">
+                        Checked Against
+                    </p>
+                    <p style="font-weight:bold; color:#2c3e50; font-size:16px;"
+                       th:text="${job.title}">
+                    </p>
+                    <p style="font-size:13px; color:#777; margin-top:4px;"
+                       th:text="${job.hr.company}">
+                    </p>
+                    <p style="font-size:13px; color:#555; margin-top:8px;">
+                        <strong>Required Skills: </strong>
+                        <span th:text="${job.requiredSkills}"></span>
+                    </p>
+                </div>
+
                 <!-- Score Box -->
-                <div class="card">
+                <div class="card" style="margin-bottom:16px;">
                     <h3 style="color:#2c3e50; margin-bottom:16px;
                                 text-align:center;">
                         Your ATS Score
                     </h3>
-
-                    <!-- Score Circle -->
                     <div class="score-box">
-
-                        <!-- Score number with color -->
                         <h1 th:classappend="${score >= 75} ? 'score-excellent' :
-                                            (${score >= 50} ? 'score-good'      :
-                                            (${score >= 25} ? 'score-average'   :
+                                            (${score >= 55} ? 'score-good'      :
+                                            (${score >= 35} ? 'score-average'   :
                                             'score-low'))"
                             th:text="${score} + '%'">
                         </h1>
-
-                        <!-- Score label -->
                         <p class="score-label" th:text="${label}"></p>
-
-                        <!-- Score message -->
                         <p style="margin-top:10px; font-size:14px; color:#777;">
                             <span th:if="${score >= 75}">
                                 Great! Your resume is a strong match.
                             </span>
-                            <span th:if="${score >= 50 and score < 75}">
-                                Good match. Add more relevant skills
-                                to improve your score.
+                            <span th:if="${score >= 55 and score < 75}">
+                                Good match. Few improvements needed.
                             </span>
-                            <span th:if="${score >= 25 and score < 50}">
+                            <span th:if="${score >= 35 and score < 55}">
                                 Average match. Update your resume
-                                with the missing skills.
+                                with missing skills.
                             </span>
-                            <span th:if="${score < 25}">
-                                Low match. Your resume needs major
-                                improvements for this job.
+                            <span th:if="${score < 35}">
+                                Low match. Major improvements needed.
                             </span>
                         </p>
-
                     </div>
-
                 </div>
 
-                <!-- Matched Skills Card -->
-                <div class="card" style="margin-top:16px;">
-
+                <!-- Matched Skills -->
+                <div class="card" style="margin-bottom:16px;">
                     <h3 style="color:#27ae60; margin-bottom:12px;">
                         ✅ Matched Skills
                         (<span th:text="${#lists.size(matched)}"></span>)
                     </h3>
-
-                    <!-- No matched skills -->
                     <p th:if="${#lists.isEmpty(matched)}"
                        style="color:#777; font-size:14px;">
                         No skills matched.
                     </p>
-
-                    <!-- Matched skill tags -->
                     <div class="skill-tags"
                          th:if="${!#lists.isEmpty(matched)}">
                         <span th:each="skill : ${matched}"
@@ -170,24 +167,18 @@
                               th:text="${skill}">
                         </span>
                     </div>
-
                 </div>
 
-                <!-- Missing Skills Card -->
-                <div class="card" style="margin-top:16px;">
-
+                <!-- Missing Skills -->
+                <div class="card" style="margin-bottom:16px;">
                     <h3 style="color:#e74c3c; margin-bottom:12px;">
                         ❌ Missing Skills
                         (<span th:text="${#lists.size(missing)}"></span>)
                     </h3>
-
-                    <!-- No missing skills -->
                     <p th:if="${#lists.isEmpty(missing)}"
                        style="color:#777; font-size:14px;">
                         All skills matched. Perfect resume!
                     </p>
-
-                    <!-- Missing skill tags -->
                     <div class="skill-tags"
                          th:if="${!#lists.isEmpty(missing)}">
                         <span th:each="skill : ${missing}"
@@ -196,25 +187,95 @@
                         </span>
                     </div>
 
-                    <!-- Tip to improve -->
-                    <p th:if="${!#lists.isEmpty(missing)}"
-                       style="margin-top:14px; font-size:13px;
-                              color:#777;">
-                        💡 Tip: Add these missing skills to your
-                        resume to improve your ATS score.
-                    </p>
+                    <!-- Improvement Tips -->
+                    <div th:if="${!#lists.isEmpty(missing)}"
+                         style="margin-top:14px; padding:12px;
+                                background:#fff9f9; border-radius:6px;
+                                border-left:3px solid #e74c3c;">
+                        <p style="font-size:13px; color:#555;
+                                   font-weight:bold; margin-bottom:6px;">
+                            💡 How to improve your score:
+                        </p>
+                        <ul style="font-size:13px; color:#777;
+                                   padding-left:16px;">
+                            <li th:each="skill : ${missing}"
+                                style="margin-bottom:4px;">
+                                Add <strong th:text="${skill}"></strong>
+                                to your resume skills section
+                            </li>
+                        </ul>
+                    </div>
+                </div>
 
+                <!-- Apply Button -->
+                <div th:if="${job != null}"
+                     class="card"
+                     style="margin-bottom:16px;">
+                    <p style="font-size:14px; color:#555; margin-bottom:12px;">
+                        Want to apply for this job?
+                    </p>
+                    <a th:href="@{/student/apply/{id}(id=${job.id})}"
+                       class="btn btn-success btn-full">
+                        Apply for
+                        <span th:text="${job.title}"></span>
+                    </a>
+                </div>
+
+                <!-- Download PDF Report -->
+                <div th:if="${job != null}" class="card">
+                    <h3 style="color:#2c3e50; margin-bottom:8px;">
+                        📥 Download ATS Report
+                    </h3>
+                    <p style="color:#777; font-size:14px; margin-bottom:16px;">
+                        Download a detailed PDF report of your
+                        ATS score with improvement suggestions.
+                    </p>
+                    <form th:action="@{/student/ats-report}"
+                          method="post"
+                          enctype="multipart/form-data">
+
+                        <!-- Hidden job id -->
+                        <input type="hidden" name="jobId"
+                               th:value="${job.id}"/>
+
+                        <!-- Resume upload again -->
+                        <div class="form-group">
+                            <label>Upload Resume for PDF Report</label>
+                            <div class="file-upload"
+                                 onclick="document.getElementById('pdfResume').click()">
+                                <p>📄 Click to select your resume</p>
+                                <p>Supported: PDF, DOC, DOCX</p>
+                                <p id="pdfFileName"
+                                   style="color:#2c3e50; font-weight:bold;
+                                          margin-top:8px;">
+                                </p>
+                            </div>
+                            <input type="file"
+                                   id="pdfResume"
+                                   name="resume"
+                                   accept=".pdf,.doc,.docx"
+                                   style="display:none"
+                                   onchange="showPdfFileName(this)"
+                                   required/>
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-primary btn-full">
+                            📥 Download PDF Report
+                        </button>
+
+                    </form>
                 </div>
 
             </div>
 
-            <!-- Default message when no result yet -->
+            <!-- Default - no result yet -->
             <div th:if="${score == null}"
                  class="card"
                  style="text-align:center; padding:40px; color:#777;">
                 <p style="font-size:40px;">📄</p>
                 <p style="margin-top:12px;">
-                    Upload your resume and enter skills
+                    Select a job and upload your resume
                     to see your ATS score here.
                 </p>
             </div>
@@ -225,11 +286,17 @@
 
 </div>
 
-<!-- Show selected file name -->
 <script>
     function showFileName(input) {
         if (input.files && input.files[0]) {
             document.getElementById('fileName').textContent =
+                'Selected: ' + input.files[0].name;
+        }
+    }
+
+    function showPdfFileName(input) {
+        if (input.files && input.files[0]) {
+            document.getElementById('pdfFileName').textContent =
                 'Selected: ' + input.files[0].name;
         }
     }

@@ -15,7 +15,19 @@
         <a th:href="@{/hr/dashboard}">Dashboard</a>
         <a th:href="@{/hr/post-job}">Post Job</a>
         <a th:href="@{/hr/view-jobs}">View Jobs</a>
-        <a th:href="@{/logout}" class="logout">Logout</a>
+
+        <!-- Inbox with unread count -->
+        <a th:href="@{/messages/inbox}">
+             Inbox
+            <span th:if="${unreadMessages > 0}"
+                  style="background:#e74c3c; color:white;
+                         border-radius:50%; padding:2px 7px;
+                         font-size:11px; font-weight:bold;"
+                  th:text="${unreadMessages}">
+            </span>
+        </a>
+
+        <a th:href="@{/}" class="logout">Logout</a>
     </div>
 </nav>
 
@@ -30,6 +42,11 @@
         <span th:text="${hr.designation}">Designation</span>
     </p>
 
+    <!-- Success message -->
+    <div th:if="${success}" class="alert alert-success"
+         th:text="${success}">
+    </div>
+
     <!-- Stats Row -->
     <div class="stats-row">
         <div class="stat-card">
@@ -39,6 +56,10 @@
         <div class="stat-card">
             <h2 th:text="${totalApplications}">0</h2>
             <p>Total Applications</p>
+        </div>
+        <div class="stat-card">
+            <h2 th:text="${unreadMessages}">0</h2>
+            <p>Unread Messages</p>
         </div>
     </div>
 
@@ -50,11 +71,6 @@
             <a th:href="@{/hr/post-job}" class="btn btn-primary btn-sm">
                 + Post New Job
             </a>
-        </div>
-
-        <!-- Success message -->
-        <div th:if="${success}" class="alert alert-success"
-             th:text="${success}">
         </div>
 
         <!-- No jobs message -->
@@ -87,7 +103,6 @@
                         <td th:text="${job.location}"></td>
                         <td th:text="${job.postedDate}"></td>
                         <td>
-                            <!-- View ranked candidates button -->
                             <a th:href="@{/hr/ranked-candidates/{id}(id=${job.id})}"
                                class="btn btn-success btn-sm">
                                 View Candidates

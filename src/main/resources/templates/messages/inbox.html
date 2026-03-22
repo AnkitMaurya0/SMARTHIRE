@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>SmartHire - Inbox</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<!-- Navigation Bar -->
+<nav>
+    <a href="/" class="nav-brand">SmartHire</a>
+    <div class="nav-links">
+
+        <!-- HR Nav -->
+        <span th:if="${currentUser.role == 'HR'}">
+            <a th:href="@{/hr/dashboard}">Dashboard</a>
+            <a th:href="@{/hr/post-job}">Post Job</a>
+            <a th:href="@{/hr/view-jobs}">View Jobs</a>
+            <a th:href="@{/messages/inbox}">Inbox</a>
+            <a th:href="@{/}" class="logout">Logout</a>
+        </span>
+
+        <!-- Student Nav -->
+        <span th:if="${currentUser.role == 'STUDENT'}">
+            <a th:href="@{/student/dashboard}">Dashboard</a>
+            <a th:href="@{/student/jobs}">Browse Jobs</a>
+            <a th:href="@{/student/applied-jobs}">My Applications</a>
+            <a th:href="@{/}" class="logout">Logout</a>
+            
+        </span>
+
+        
+        
+    </div>
+</nav>
+
+<div class="container">
+
+    <div class="page-title">📬 Inbox</div>
+
+    <!-- Success / Error messages -->
+    <div th:if="${success}" class="alert alert-success"
+         th:text="${success}">
+    </div>
+    <div th:if="${error}" class="alert alert-error"
+         th:text="${error}">
+    </div>
+
+    <!-- No contacts message -->
+    <div th:if="${#lists.isEmpty(contacts)}"
+         class="card"
+         style="text-align:center; padding:40px; color:#777;">
+        <p style="font-size:40px;">📭</p>
+        <p style="margin-top:12px;">No messages yet.</p>
+        <p style="font-size:14px; margin-top:8px;">
+            Messages from HR or Students will appear here.
+        </p>
+    </div>
+
+    <!-- Contacts List -->
+    <div th:if="${!#lists.isEmpty(contacts)}">
+        <div class="card"
+             th:each="contact : ${contacts}"
+             style="margin-bottom:12px; cursor:pointer;"
+             th:onclick="|window.location='/messages/chat/${contact.id}'|">
+
+            <div style="display:flex; align-items:center;
+                        justify-content:space-between;">
+
+                <div style="display:flex; align-items:center; gap:16px;">
+
+                    <!-- Avatar -->
+                    <div style="width:48px; height:48px;
+                                border-radius:50%; background:#2c3e50;
+                                display:flex; align-items:center;
+                                justify-content:center; color:white;
+                                font-size:20px; font-weight:bold;">
+                        <span th:text="${#strings.substring(contact.name, 0, 1)}">
+                        </span>
+                    </div>
+
+                    <!-- Contact Info -->
+                    <div>
+                        <p style="font-weight:bold; color:#2c3e50;
+                                  margin-bottom:4px;"
+                           th:text="${contact.name}">
+                        </p>
+                        <p style="font-size:13px; color:#777;">
+                            <span th:if="${contact.role == 'HR'}"
+                                  th:text="${contact.company}">
+                            </span>
+                            <span th:if="${contact.role == 'STUDENT'}"
+                                  th:text="${contact.college}">
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Role Badge -->
+                <div>
+                    <span class="badge"
+                          th:classappend="${contact.role == 'HR'} ?
+                                         'badge-shortlisted' : 'badge-applied'"
+                          th:text="${contact.role}">
+                    </span>
+                    <a th:href="@{/messages/chat/{id}(id=${contact.id})}"
+                       class="btn btn-primary btn-sm"
+                       style="margin-left:8px;">
+                        Open Chat
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>

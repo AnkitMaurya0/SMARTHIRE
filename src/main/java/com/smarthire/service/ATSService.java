@@ -1,5 +1,6 @@
 package com.smarthire.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -7,89 +8,124 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.*;
 import java.util.*;
 
-/**
- * ATSService Class
- * ATS = Applicant Tracking System
- * Handles resume parsing and ATS score calculation.
- * Uses Apache Tika to extract text from PDF and DOC files.
- */
 @Service
 public class ATSService {
 
     @Value("${file.upload-dir}")
-    private String uploadDir; // folder path from application.properties
+    private String uploadDir;
+
+    @Value("${python.script.path}")
+    private String pythonScriptPath;
+
+    @Value("${python.executable}")
+    private String pythonExecutable;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Parse resume file and extract plain text
-     * Supports PDF and DOC/DOCX formats
      */
     public String parseResume(MultipartFile file) throws Exception {
         Tika tika = new Tika();
-        tika.setMaxStringLength(100000); // max characters to extract
+        tika.setMaxStringLength(100000);
         return tika.parseToString(file.getInputStream());
     }
 
     /**
      * Save uploaded resume file to uploads/resumes folder
-     * Returns saved filename
      */
-    public String saveResumeFile(MultipartFile file, Long studentId) throws Exception {
-
-        // Create unique filename using student id and timestamp
+    public String saveResumeFile(MultipartFile file,
+            Long studentId) throws Exception {
         String filename = "student_" + studentId + "_" +
                 System.currentTimeMillis() + "_" +
                 file.getOriginalFilename();
-
-        // Create directory if it does not exist
         Path dirPath = Paths.get(uploadDir);
         Files.createDirectories(dirPath);
-
-        // Save file to directory
         Path filePath = dirPath.resolve(filename);
         Files.copy(file.getInputStream(), filePath,
                 StandardCopyOption.REPLACE_EXISTING);
-
         return filename;
     }
 
     /**
-     * Calculate ATS score by matching resume text with required skills
-     * Returns score as percentage e.g. 75.0
+     * Calculate ATS score - calls Python ML script
+     * Falls back to Java scoring if Python fails
      */
-    public double calculateScore(String resumeText, String requiredSkills) {
+    @SuppressWarnings("unchecked")
+    public double calculateScore(String resumeText,
+            String requiredSkills) {
+        try {
+            // Call Python ML script
+            Map<String, Object> result = callPythonScript(resumeText, requiredSkills);
+            return ((Number) result.get("score")).doubleValue();
 
-        if (resumeText == null || requiredSkills == null)
-            return 0;
+        } catch (Exception e) {
+            System.err.println("Python failed, using Java: "
+                    + e.getMessage());
+            return javaScore(resumeText, requiredSkills);
+        }
+    }
 
-        // Split required skills by comma
-        String[] skills = requiredSkills.toLowerCase().split(",");
-        String resumeLower = resumeText.toLowerCase();
+    /**
+     * Call Python ATS scorer script
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> callPythonScript(
+            String resumeText, String requiredSkills) throws Exception {
 
-        int matchedCount = 0;
+        // Clean text to avoid argument issues
+        String cleanResume = resumeText
+                .replace("\"", " ")
+                .replace("'", " ")
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .trim();
 
-        // Check each skill in resume text
-        for (String skill : skills) {
-            if (resumeLower.contains(skill.trim())) {
-                matchedCount++;
-            }
+        ProcessBuilder pb = new ProcessBuilder(
+                pythonExecutable,
+                pythonScriptPath,
+                cleanResume,
+                requiredSkills);
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+
+        String output = new String(
+                process.getInputStream().readAllBytes());
+        process.waitFor();
+
+        if (output.trim().startsWith("{")) {
+            return objectMapper.readValue(output.trim(), Map.class);
         }
 
-        // Calculate percentage
-        double score = ((double) matchedCount / skills.length) * 100;
+        throw new RuntimeException("Python output invalid: " + output);
+    }
 
-        // Round to 2 decimal places
+    /**
+     * Java fallback scoring
+     */
+    private double javaScore(String resumeText,
+            String requiredSkills) {
+        if (resumeText == null || requiredSkills == null)
+            return 0;
+        String[] skills = requiredSkills.toLowerCase().split(",");
+        String resumeLower = resumeText.toLowerCase();
+        int matched = 0;
+        for (String skill : skills) {
+            if (resumeLower.contains(skill.trim()))
+                matched++;
+        }
+        double score = ((double) matched / skills.length) * 100;
         return Math.round(score * 100.0) / 100.0;
     }
 
     /**
-     * Get list of skills found in resume
+     * Get matched skills
      */
-    public List<String> getMatchedSkills(String resumeText, String requiredSkills) {
-
+    public List<String> getMatchedSkills(String resumeText,
+            String requiredSkills) {
         String[] skills = requiredSkills.toLowerCase().split(",");
         String resumeLower = resumeText.toLowerCase();
         List<String> matched = new ArrayList<>();
-
         for (String skill : skills) {
             if (resumeLower.contains(skill.trim())) {
                 matched.add(skill.trim());
@@ -99,14 +135,13 @@ public class ATSService {
     }
 
     /**
-     * Get list of skills missing in resume
+     * Get missing skills
      */
-    public List<String> getMissingSkills(String resumeText, String requiredSkills) {
-
+    public List<String> getMissingSkills(String resumeText,
+            String requiredSkills) {
         String[] skills = requiredSkills.toLowerCase().split(",");
         String resumeLower = resumeText.toLowerCase();
         List<String> missing = new ArrayList<>();
-
         for (String skill : skills) {
             if (!resumeLower.contains(skill.trim())) {
                 missing.add(skill.trim());
@@ -116,14 +151,14 @@ public class ATSService {
     }
 
     /**
-     * Returns score label based on percentage
+     * Score label
      */
     public String getScoreLabel(double score) {
         if (score >= 75)
             return "Excellent Match";
-        if (score >= 50)
+        if (score >= 55)
             return "Good Match";
-        if (score >= 25)
+        if (score >= 35)
             return "Average Match";
         return "Low Match";
     }

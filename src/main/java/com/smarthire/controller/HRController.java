@@ -5,6 +5,7 @@ import com.smarthire.model.Job;
 import com.smarthire.model.User;
 import com.smarthire.repository.ApplicationRepository;
 import com.smarthire.service.JobService;
+import com.smarthire.service.MessageService;
 import com.smarthire.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -27,26 +28,37 @@ public class HRController {
     private JobService jobService; // job posting logic
 
     @Autowired
-    private UserService userService; // get logged in HR details
+    private UserService userService; // get logged in HR
 
     @Autowired
-    private ApplicationRepository applicationRepo; // get applications for jobs
+    private ApplicationRepository applicationRepo; // get applications
+
+    @Autowired
+    private MessageService messageService; // unread message count
 
     /**
      * HR Dashboard
-     * Shows total jobs posted and recent job list
+     * Shows total jobs, applications and unread messages
      */
     @GetMapping("/dashboard")
     public String dashboard(Model model, Authentication auth) {
 
-        // Get currently logged in HR
         User hr = userService.findByEmail(auth.getName());
-
-        // Get all jobs posted by this HR
         List<Job> jobs = jobService.getJobsByHR(hr);
+
+        // Count total applications across all HR jobs
+        long totalApplications = 0;
+        for (Job job : jobs) {
+            totalApplications += applicationRepo.countByJob(job);
+        }
+
+        // Count unread messages
+        long unreadMessages = messageService.getUnreadCount(hr);
 
         model.addAttribute("hr", hr);
         model.addAttribute("totalJobs", jobs.size());
+        model.addAttribute("totalApplications", totalApplications);
+        model.addAttribute("unreadMessages", unreadMessages);
         model.addAttribute("jobs", jobs);
 
         return "hr/dashboard";
@@ -63,20 +75,14 @@ public class HRController {
 
     /**
      * Handle Post Job form submission
-     * Saves new job to database
      */
     @PostMapping("/post-job")
     public String postJob(@ModelAttribute Job job,
             Authentication auth,
             RedirectAttributes ra) {
 
-        // Get currently logged in HR
         User hr = userService.findByEmail(auth.getName());
-
-        // Set HR as owner of this job
         job.setHr(hr);
-
-        // Save job to database
         jobService.saveJob(job);
 
         ra.addFlashAttribute("success", "Job posted successfully!");
@@ -99,20 +105,23 @@ public class HRController {
 
     /**
      * Show ranked candidates for a specific job
-     * Candidates are sorted by ATS score highest first
+     * Candidates sorted by ATS score highest first
      */
     @GetMapping("/ranked-candidates/{jobId}")
     public String rankedCandidates(@PathVariable Long jobId,
-            Model model) {
+            Model model,
+            Authentication auth) {
 
-        // Get job details
+        User hr = userService.findByEmail(auth.getName());
         Job job = jobService.getJobById(jobId);
-
-        // Get all applications sorted by ATS score
         List<Application> applications = applicationRepo.findByJobOrderByAtsScoreDesc(job);
+
+        // Unread messages count for nav
+        long unreadMessages = messageService.getUnreadCount(hr);
 
         model.addAttribute("job", job);
         model.addAttribute("applications", applications);
+        model.addAttribute("unreadMessages", unreadMessages);
 
         return "hr/ranked-candidates";
     }
@@ -128,5 +137,18 @@ public class HRController {
 
         ra.addFlashAttribute("success", "Job deleted successfully!");
         return "redirect:/hr/view-jobs";
+    }
+
+    @PostMapping("/update-status")
+    public String updateStatus(@RequestParam Long appId,
+            @RequestParam String status,
+            @RequestParam Long jobId,
+            RedirectAttributes ra) {
+        Application app = applicationRepo.findById(appId)
+                .orElseThrow(() -> new RuntimeException("Application not found"));
+        app.setStatus(status);
+        applicationRepo.save(app);
+        ra.addFlashAttribute("success", "Status updated successfully!");
+        return "redirect:/hr/ranked-candidates/" + jobId;
     }
 }

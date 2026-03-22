@@ -16,14 +16,19 @@
         <a th:href="@{/student/jobs}">Browse Jobs</a>
         <a th:href="@{/student/applied-jobs}">My Applications</a>
         <a th:href="@{/student/ats-check}">ATS Check</a>
-        <form th:action="@{/logout}" method="post" style="display:inline;">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-            <button type="submit" style="background:none; border:none;
-                                  color:#e74c3c; cursor:pointer;
-                                  font-size:14px; padding:6px 14px;">
-        Logout
-    </button>
-</form>
+
+        <!-- Inbox with unread count -->
+        <a th:href="@{/messages/inbox}">
+            📬 Inbox
+            <span th:if="${unreadMessages > 0}"
+                  style="background:#e74c3c; color:white;
+                         border-radius:50%; padding:2px 7px;
+                         font-size:11px; font-weight:bold;"
+                  th:text="${unreadMessages}">
+            </span>
+        </a>
+
+        <a th:href="@{/}" class="logout">Logout</a>
     </div>
 </nav>
 
@@ -47,22 +52,25 @@
     <!-- Stats Row -->
     <div class="stats-row">
 
-        <!-- Total jobs applied -->
         <div class="stat-card">
             <h2 th:text="${totalApplied}">0</h2>
             <p>Jobs Applied</p>
         </div>
 
-        <!-- Shortlisted count -->
         <div class="stat-card">
             <h2 th:text="${totalShortlisted}">0</h2>
             <p>Shortlisted</p>
         </div>
 
-        <!-- Best ATS score -->
         <div class="stat-card">
             <h2 th:text="${bestScore} + '%'">0%</h2>
             <p>Best ATS Score</p>
+        </div>
+
+        <!-- Unread Messages Stat -->
+        <div class="stat-card">
+            <h2 th:text="${unreadMessages}">0</h2>
+            <p>Unread Messages</p>
         </div>
 
     </div>
@@ -99,6 +107,7 @@
                         <th>Matched Skills</th>
                         <th>Applied Date</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -142,6 +151,15 @@
                                                  'badge-rejected'))"
                                   th:text="${app.status}">
                             </span>
+                        </td>
+
+                        <!-- Message HR Button -->
+                        <td>
+                            <a th:href="@{/messages/chat/{id}(id=${app.job.hr.id},
+                                         jobId=${app.job.id})}"
+                               class="btn btn-primary btn-sm">
+                                💬 Message HR
+                            </a>
                         </td>
 
                     </tr>
